@@ -198,10 +198,131 @@ export default function App() {
     ];
   }, []);
 
+  // Samouczek na telefon: te same funkcje, ale wskazuje elementy układu mobilnego.
+  const mobileTourSteps = useMemo<TourStep[]>(() => {
+    const content = () => {
+      setMenuOpen(false);
+      setTab('content');
+    };
+    return [
+      {
+        target: 'm-format',
+        placement: 'bottom',
+        scroll: 'nearest',
+        before: () => {
+          setTab('content');
+          setMenuOpen(true);
+        },
+        title: 'Format dla AI',
+        body: (
+          <>
+            <p>W menu ☰ znajdziesz instrukcję, według której AI przygotuje Twoje CV w formacie zrozumiałym dla CVisualise.</p>
+            <p>
+              Skopiuj ją i wklej swojemu modelowi AI (np. ChatGPT, Claude, Gemini) razem ze swoimi danymi i treścią oferty pracy. W odpowiedzi
+              dostaniesz plik <strong>.md</strong> z CV dopasowanym do oferty.
+            </p>
+          </>
+        ),
+      },
+      {
+        target: 'import',
+        placement: 'bottom',
+        scroll: 'nearest',
+        before: content,
+        title: 'Importuj',
+        body: <p>Wczytaj plik .md przygotowany przez AI, np. z Plików albo z pobranych. CV od razu pojawi się poniżej.</p>,
+      },
+      {
+        target: 'save',
+        placement: 'bottom',
+        scroll: 'nearest',
+        before: content,
+        title: 'Zapisz',
+        body: (
+          <p>Pobiera aktualną wersję CV jako plik .md, razem z poprawkami i wyglądem. Zachowaj go, aby wrócić do edycji albo dać go AI przy kolejnej ofercie.</p>
+        ),
+      },
+      {
+        target: 'export',
+        placement: 'bottom',
+        scroll: 'nearest',
+        before: content,
+        title: 'PDF',
+        body: <p>Tworzy gotowe do wysłania CV w PDF. Otworzy się systemowe okno drukowania, z którego zapiszesz plik PDF.</p>,
+      },
+      {
+        target: 'menu',
+        placement: 'bottom',
+        scroll: 'nearest',
+        before: content,
+        title: 'Więcej opcji',
+        body: <p>Tu są pozostałe opcje: format dla AI, ten samouczek, nowe lub przykładowe CV, cofanie zmian i ciemny motyw.</p>,
+      },
+      {
+        target: 'preview',
+        placement: 'bottom',
+        before: content,
+        title: 'Podgląd CV',
+        body: <p>Tak będzie wyglądać Twoje CV w PDF. Dotknij dowolny fragment, aby od razu przejść do jego edycji.</p>,
+      },
+      {
+        target: 'header',
+        placement: 'bottom',
+        before: content,
+        title: 'Nagłówek',
+        body: <p>Imię i nazwisko, stanowisko oraz dane kontaktowe z góry CV. Puste pola są po prostu pomijane.</p>,
+      },
+      {
+        target: 'sections',
+        placement: 'bottom',
+        before: content,
+        title: 'Sekcje',
+        body: (
+          <p>
+            Każda część CV, np. profil, doświadczenie czy wykształcenie, to osobna sekcja. Dotknij jej, aby rozwinąć i edytować treść. Strzałkami
+            zmienisz kolejność, koszem usuniesz sekcję, a przyciskiem na dole dodasz nową.
+          </p>
+        ),
+      },
+      {
+        target: 'cheatsheet',
+        placement: 'bottom',
+        before: content,
+        title: 'Ściągawka składni',
+        body: <p>Krótka ściąga zapisu treści: wpis z datą po prawej, punkt listy, pogrubienie, link albo podział strony.</p>,
+      },
+      {
+        target: 'sidebar',
+        placement: 'bottom',
+        before: () => setTab('style'),
+        title: 'Wygląd',
+        body: (
+          <p>
+            Krój pisma, kolor nagłówków, wielkość tekstu, odstępy i marginesy. „Dopasuj do 1 strony” sam dobierze ustawienia tak, aby CV zmieściło się
+            na jednej stronie A4.
+          </p>
+        ),
+      },
+      {
+        target: 'sidebar',
+        placement: 'bottom',
+        before: () => setTab('source'),
+        title: 'Markdown',
+        body: (
+          <>
+            <p>Cały plik CV w surowej postaci, do edycji bezpośrednio w tekście. Jeśli plik zawiera błąd, zobaczysz tu jego opis i numer wiersza.</p>
+            <p>To już wszystko. Samouczek uruchomisz ponownie z menu ☰.</p>
+          </>
+        ),
+      },
+    ];
+  }, []);
+
   const closeTour = useCallback(() => {
     setShowTour(false);
     setMenuOpen(false);
     setTab('content');
+    if (isMobileNow()) window.scrollTo({ top: 0, behavior: 'smooth' });
   }, []);
 
   const parsed = useMemo(() => tryParse(source), [source]);
@@ -514,7 +635,7 @@ export default function App() {
 
       {showFormat && <FormatDialog onClose={() => setShowFormat(false)} />}
 
-      {showTour && <Tour steps={tourSteps} onClose={closeTour} />}
+      {showTour && <Tour steps={isMobile ? mobileTourSteps : tourSteps} onClose={closeTour} mobile={isMobile} />}
 
       {showPrintTip && (
         <PrintTip

@@ -18,6 +18,8 @@ export interface TourStep {
 interface Props {
   steps: TourStep[];
   onClose: () => void;
+  /** Telefon: okienko jako panel u dołu ekranu, a wskazany element przewijany pod górny pasek. */
+  mobile?: boolean;
 }
 
 interface Box {
@@ -89,7 +91,7 @@ function position(target: Box | null, size: { w: number; h: number }, preferred:
   return { top: clampY((vh - size.h) / 2), left: clampX((vw - size.w) / 2), placement: null, arrow: 0 };
 }
 
-export function Tour({ steps, onClose }: Props) {
+export function Tour({ steps, onClose, mobile = false }: Props) {
   const [index, setIndex] = useState(0);
   const [confirming, setConfirming] = useState(false);
   const [box, setBox] = useState<Box | null>(null);
@@ -106,11 +108,11 @@ export function Tour({ steps, onClose }: Props) {
     step.before?.();
     let frame = requestAnimationFrame(() => {
       frame = requestAnimationFrame(() => {
-        findTarget(step)?.scrollIntoView({ block: step.scroll ?? 'nearest', inline: 'nearest' });
+        findTarget(step)?.scrollIntoView({ block: step.scroll ?? (mobile ? 'start' : 'nearest'), inline: 'nearest' });
       });
     });
     return () => cancelAnimationFrame(frame);
-  }, [step]);
+  }, [step, mobile]);
 
   // Śledzenie położenia wskazanego elementu (przewijanie, zmiana rozmiaru, zmiana treści).
   useEffect(() => {
@@ -170,7 +172,7 @@ export function Tour({ steps, onClose }: Props) {
     return () => cancelAnimationFrame(frame);
   }, [box, animate]);
 
-  const pos = size ? position(box, size, step.placement) : null;
+  const pos = size && !mobile ? position(box, size, step.placement) : null;
 
   return (
     <div className="tour no-print" role="dialog" aria-modal="true" aria-labelledby="tour-title">
@@ -182,8 +184,8 @@ export function Tour({ steps, onClose }: Props) {
       <div
         ref={popRef}
         key={confirming ? 'confirm' : index}
-        className={`tour-pop${pos?.placement ? ` tour-pop--${pos.placement}` : ''}`}
-        style={pos ? { top: pos.top, left: pos.left, ['--arrow' as string]: `${pos.arrow}px` } : { visibility: 'hidden' }}
+        className={`tour-pop${mobile ? ' tour-pop--sheet' : pos?.placement ? ` tour-pop--${pos.placement}` : ''}`}
+        style={mobile ? undefined : pos ? { top: pos.top, left: pos.left, ['--arrow' as string]: `${pos.arrow}px` } : { visibility: 'hidden' }}
       >
         {confirming ? (
           <>
