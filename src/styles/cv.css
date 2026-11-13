@@ -344,43 +344,48 @@
   }
 }
 
-/* --- Druk na telefonie: strona bez marginesów, odstępy daje arkusz (zob. lib/paginate.ts) --- */
+/* --- Kopia arkusza dla generatora PDF (lib/pdfExport.ts, lib/paginate.ts) --- */
 
-.cv-print-spacer {
-  display: none;
+.cv-sheet.is-export {
+  min-height: 0;
+  box-shadow: none;
+  filter: none;
 }
 
-.cv-sheet.is-paginating .cv-print-spacer {
-  display: block;
-}
-
-.cv-sheet.is-paginating [data-print-push] {
+.cv-sheet.is-export .cv-pushed {
   margin-top: 0 !important;
 }
 
-.cv-sheet.is-paginating .cv-pagebreak {
+.cv-sheet.is-export .cv-pagebreak {
   margin: 0;
   border: 0;
 }
 
-@media print {
-  html[data-print-bare] .cv-sheet {
-    padding: var(--cv-mt) var(--cv-mx) 0;
-  }
+/* Punktory jako prawdziwe elementy, żeby dało się zmierzyć ich położenie. */
+.cv-sheet.is-export .cv-list > li::before {
+  content: none;
+}
 
-  html[data-print-bare] .cv-print-spacer {
-    display: block;
-  }
+.cv-x-bullet {
+  display: inline-block;
+  width: 0.3em;
+  height: 0.3em;
+  margin-left: -0.93em;
+  margin-right: 0.63em;
+  border-radius: 50%;
+  background: currentColor;
+  vertical-align: 0.2em;
+}
 
-  html[data-print-bare] [data-print-push] {
-    margin-top: 0 !important;
-  }
+.cv-x-num {
+  display: inline-block;
+  width: 1.35em;
+  margin-left: -1.35em;
+  color: var(--cv-muted);
+}
 
-  /* Podział na kartki jest już policzony - przeglądarka nie przesuwa bloków sama. */
-  html[data-print-bare] .cv-sheet *,
-  html[data-print-bare] .cv-pagebreak {
-    break-before: auto !important;
-    break-after: auto !important;
-    break-inside: auto !important;
-  }
+.cv-x-probe {
+  display: inline-block;
+  width: 0;
+  height: 0;
 }

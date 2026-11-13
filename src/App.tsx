@@ -4,7 +4,6 @@ import templateSource from '../examples/szablon.md?raw';
 import { CvParseError, getStyle, parseCv, serializeCv, suggestedBaseName, type CvDoc } from './lib/format';
 import { downloadText, isMarkdownFile, loadDraft, pickFile, saveDraft, withMdExtension } from './lib/files';
 import { useHistory } from './lib/useHistory';
-import { clearPagination, paginateForPrint, setBarePrint } from './lib/paginate';
 import { ContentEditor } from './components/ContentEditor';
 import { StyleEditor } from './components/StyleEditor';
 import { SourceEditor } from './components/SourceEditor';
@@ -47,6 +46,7 @@ export default function App() {
   const [dragging, setDragging] = useState(false);
   const [showFormat, setShowFormat] = useState(false);
   const [showPrintTip, setShowPrintTip] = useState(false);
+  const [pdf, setPdf] = useState<PdfState | null>(null);
   const [showTour, setShowTour] = useState(false);
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const isMobile = useIsMobile();
@@ -252,7 +252,12 @@ export default function App() {
         scroll: 'nearest',
         before: content,
         title: 'PDF',
-        body: <p>Tworzy gotowe do wysłania CV w PDF. Otworzy się systemowe okno drukowania, z którego zapiszesz plik PDF.</p>,
+        body: (
+          <p>
+            Tworzy plik PDF gotowy do wysłania, bez okna drukowania. Możesz go pobrać albo od razu udostępnić, np. zapisać w Plikach lub wysłać
+            mailem. Plik zawiera prawdziwy tekst, więc dobrze odczytują go systemy rekrutacyjne (ATS).
+          </p>
+        ),
       },
       {
         target: 'menu',
@@ -337,18 +342,6 @@ export default function App() {
   const doc = parsed.ok ? parsed.doc : lastGood.current;
   const docRef = useRef(doc);
   docRef.current = doc;
-  const isMobileRef = useRef(isMobile);
-  isMobileRef.current = isMobile;
-
-  // Telefon: druk bez marginesów strony (iOS nie pozwala wyłączyć nagłówka i stopki), więc CV dzielimy na kartki sami.
-  const preparePrint = useCallback(() => {
-    const sheet = document.querySelector<HTMLElement>('.preview .cv-sheet');
-    if (!sheet) return;
-    setBarePrint(isMobileRef.current);
-    if (!isMobileRef.current) return clearPagination(sheet);
-    const { num } = getStyle(docRef.current.meta);
-    paginateForPrint(sheet, num['margin-top'], num['margin-bottom']);
-  }, []);
 
   const toast = useCallback((text: string, tone: Toast['tone'] = 'info') => {
     const id = Date.now() + Math.random();
@@ -417,22 +410,41 @@ export default function App() {
       setTab('source');
       return;
     }
-    preparePrint();
     window.print();
-  }, [parsed.ok, toast, preparePrint]);
+  }, [parsed.ok, toast]);
+
+  // Telefon: PDF tworzony w aplikacji, bo iOS dopisuje do wydruku nagłówek i stopkę, których nie da się wyłączyć.
+  const makePdf = useCallback(async () => {
+    const sheet = document.querySelector<HTMLElement>('.preview .cv-sheet');
+    if (!sheet) return;
+    const current = docRef.current;
+    const name = `${suggestedBaseName(current)}.pdf`;
+    setPdf({ status: 'working' });
+    try {
+      const { createPdf } = await import('./lib/pdfExport');
+      const blob = await createPdf(current, sheet);
+      setPdf({ status: 'ready', name, file: new File([blob], name, { type: 'application/pdf' }), url: URL.createObjectURL(blob) });
+    } catch (error) {
+      console.error(error);
+      setPdf({ status: 'error' });
+    }
+  }, []);
 
   const exportPdf = useCallback(() => {
-    if (localStorage.getItem(PRINT_TIP_KEY) !== '1') setShowPrintTip(true);
+    if (!parsed.ok) {
+      toast('Popraw błąd w pliku przed eksportem do PDF.', 'error');
+      setTab('source');
+      return;
+    }
+    if (isMobile) void makePdf();
+    else if (localStorage.getItem(PRINT_TIP_KEY) !== '1') setShowPrintTip(true);
     else print();
-  }, [print]);
+  }, [parsed.ok, isMobile, makePdf, print, toast]);
 
   // Tytuł dokumentu = domyślna nazwa pliku PDF w oknie drukowania.
   useEffect(() => {
     const original = document.title;
-    const before = () => {
-      document.title = suggestedBaseName(docRef.current);
-      preparePrint();
-    };
+    const before = () => (document.title = suggestedBaseName(docRef.current));
     const after = () => (document.title = original);
     window.addEventListener('beforeprint', before);
     window.addEventListener('afterprint', after);
@@ -440,7 +452,7 @@ export default function App() {
       window.removeEventListener('beforeprint', before);
       window.removeEventListener('afterprint', after);
     };
-  }, [preparePrint]);
+  }, []);
 
   const fit = useCallback(() => {
     const outcome = fitRef.current?.();
@@ -667,9 +679,18 @@ export default function App() {
 
       {showTour && <Tour steps={isMobile ? mobileTourSteps : tourSteps} onClose={closeTour} mobile={isMobile} />}
 
+      {pdf && (
+        <PdfDialog
+          state={pdf}
+          onClose={() => {
+            if (pdf.status === 'ready') URL.revokeObjectURL(pdf.url);
+            setPdf(null);
+          }}
+        />
+      )}
+
       {showPrintTip && (
         <PrintTip
-          mobile={isMobile}
           onCancel={() => setShowPrintTip(false)}
           onConfirm={(hide) => {
             if (hide) localStorage.setItem(PRINT_TIP_KEY, '1');
@@ -690,24 +711,13 @@ export default function App() {
   );
 }
 
-function PrintTip({ mobile, onCancel, onConfirm }: { mobile: boolean; onCancel: () => void; onConfirm: (hide: boolean) => void }) {
+function PrintTip({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: (hide: boolean) => void }) {
   const [hide, setHide] = useState(false);
   return (
     <div className="modal-backdrop no-print" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
       <div className="modal modal--small" role="dialog" aria-modal="true">
         <h2>Eksport do PDF</h2>
-        <p className="muted">Za chwilę otworzy się okno drukowania. {mobile ? 'Zapisz w nim CV jako PDF:' : 'Ustaw w nim:'}</p>
-        {mobile ? (
-          <ol className="tip-list">
-            <li>
-              <strong>Android:</strong> jako drukarkę wybierz „Zapisz jako PDF” i stuknij ikonę PDF.
-            </li>
-            <li>
-              <strong>iPhone:</strong> w opcjach drukowania stuknij „Udostępnij” (albo rozsuń palcami podgląd strony) i wybierz „Zachowaj w
-              Plikach”.
-            </li>
-          </ol>
-        ) : (
+        <p className="muted">Za chwilę otworzy się okno drukowania. Ustaw w nim:</p>
         <ol className="tip-list">
           <li>
             Miejsce docelowe: <strong>Zapisz jako PDF</strong>
@@ -725,7 +735,6 @@ function PrintTip({ mobile, onCancel, onConfirm }: { mobile: boolean; onCancel: 
             Zaznacz <strong>„Grafika tła”</strong>, jeśli kolory wyglądają blado
           </li>
         </ol>
-        )}
         <p className="muted small">Nazwa pliku zostanie zaproponowana automatycznie, np. Imie_Nazwisko_CV_Stanowisko.pdf. PDF zawiera prawdziwy tekst — można go zaznaczać i przeszukiwać (ważne dla systemów ATS).</p>
         <label className="check">
           <input type="checkbox" checked={hide} onChange={(e) => setHide(e.target.checked)} /> Nie pokazuj ponownie
@@ -739,6 +748,69 @@ function PrintTip({ mobile, onCancel, onConfirm }: { mobile: boolean; onCancel: 
             <IconPdf /> Otwórz okno drukowania
           </button>
         </div>
+      </div>
+    </div>
+  );
+}
+
+type PdfState = { status: 'working' } | { status: 'ready'; name: string; file: File; url: string } | { status: 'error' };
+
+function PdfDialog({ state, onClose }: { state: PdfState; onClose: () => void }) {
+  const canShare = state.status === 'ready' && typeof navigator.canShare === 'function' && navigator.canShare({ files: [state.file] });
+  const share = async () => {
+    if (state.status !== 'ready') return;
+    try {
+      await navigator.share({ files: [state.file], title: state.name });
+    } catch {
+      // Anulowane udostępnianie - nic do zrobienia.
+    }
+  };
+  return (
+    <div className="modal-backdrop no-print" onMouseDown={(e) => e.target === e.currentTarget && state.status !== 'working' && onClose()}>
+      <div className="modal modal--small" role="dialog" aria-modal="true" aria-live="polite">
+        {state.status === 'working' && (
+          <>
+            <h2>Tworzę PDF…</h2>
+            <p className="muted">To potrwa chwilę.</p>
+          </>
+        )}
+        {state.status === 'error' && (
+          <>
+            <h2>Nie udało się utworzyć PDF</h2>
+            <p className="muted">Sprawdź połączenie z internetem (potrzebne do pobrania czcionek) i spróbuj ponownie.</p>
+            <div className="modal-foot">
+              <div className="spacer" />
+              <button className="btn btn-primary" onClick={onClose}>
+                Zamknij
+              </button>
+            </div>
+          </>
+        )}
+        {state.status === 'ready' && (
+          <>
+            <h2>PDF gotowy</h2>
+            <p className="pdf-name">{state.name}</p>
+            <p className="muted small">
+              {canShare
+                ? '„Udostępnij” pozwala zapisać plik w Plikach albo od razu wysłać go mailem lub komunikatorem.'
+                : 'Plik zapisze się w folderze pobranych plików.'}
+            </p>
+            <div className="modal-foot">
+              <button className="btn btn-ghost" onClick={onClose}>
+                Zamknij
+              </button>
+              <div className="spacer" />
+              {canShare && (
+                <button className="btn" onClick={share}>
+                  Udostępnij
+                </button>
+              )}
+              <a className="btn btn-primary" href={state.url} download={state.name}>
+                <IconPdf /> Pobierz
+              </a>
+            </div>
+          </>
+        )}
       </div>
     </div>
   );

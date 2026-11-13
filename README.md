@@ -31,6 +31,7 @@ Każdy push na gałąź `main` uruchamia workflow [`.github/workflows/deploy.yml
    - **Markdown** — cały plik źródłowy; błędy są pokazywane z numerem wiersza.
 4. **Zapisz .md** (⌘S) — pobiera aktualną wersję (z ustawieniami wyglądu).
 5. **Eksportuj PDF** (⌘P) — okno drukowania → „Zapisz jako PDF”, marginesy *Domyślne*, skala 100%, bez nagłówków i stopek. Nazwa pliku jest proponowana automatycznie (`Imie_Nazwisko_CV_Stanowisko.pdf`). PDF zawiera prawdziwy tekst w poprawnej kolejności czytania, więc dobrze go czytają systemy ATS.
+   Na telefonie PDF powstaje w samej aplikacji, bez okna drukowania (iOS dopisuje do wydruku nagłówek i stopkę, których nie da się wyłączyć): przycisk **PDF** tworzy plik, który można pobrać albo udostępnić. Tekst jest zapisywany osadzonymi czcionkami Arimo, Gelasio i Open Sans (licencja SIL OFL, `src/assets/fonts`), przyciętymi do alfabetu łacińskiego skryptem `scripts/subset-fonts.sh`.
 
 Cofnij / ponów: przyciski w pasku lub ⌘Z / ⇧⌘Z (poza polami tekstowymi). Bieżąca wersja jest zapisywana w pamięci przeglądarki — po odświeżeniu strony wraca. Pliki `.md` są Twoją właściwą kopią.
 

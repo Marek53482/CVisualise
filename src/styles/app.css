@@ -2084,3 +2084,15 @@ input[type='range']::-moz-range-thumb {
     transition: none;
   }
 }
+
+/* --- Okno gotowego PDF (telefon) --- */
+
+.pdf-name {
+  margin: 4px 0 6px;
+  font-weight: 600;
+  overflow-wrap: anywhere;
+}
+
+a.btn {
+  text-decoration: none;
+}
