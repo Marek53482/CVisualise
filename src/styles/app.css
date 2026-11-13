@@ -1984,3 +1984,93 @@ input[type='range']::-moz-range-thumb {
 .app.is-mobile.tour-active {
   padding-bottom: 60vh;
 }
+
+/* --- Ekran startowy na telefonie --- */
+
+.splash {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: max(24px, env(safe-area-inset-top)) 24px max(24px, env(safe-area-inset-bottom));
+  background:
+    radial-gradient(120% 70% at 50% 30%, var(--panel) 0%, var(--bg) 70%),
+    var(--bg);
+  overscroll-behavior: contain;
+  touch-action: none;
+  transition:
+    opacity 0.26s ease,
+    transform 0.26s ease;
+}
+
+.splash.is-leaving {
+  opacity: 0;
+  transform: scale(1.02);
+  pointer-events: none;
+}
+
+.splash-inner {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 44px;
+  width: 100%;
+  max-width: 320px;
+  margin-top: -6vh;
+}
+
+.splash-brand {
+  margin: 0;
+  padding: 0;
+  font-size: 62px;
+  -webkit-text-stroke-width: 0.9px;
+  animation: splash-rise 0.7s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.splash-brand .brand-cv {
+  -webkit-text-stroke-width: 2.6px;
+}
+
+.splash-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: 100%;
+}
+
+.splash-btn {
+  justify-content: center;
+  width: 100%;
+  height: 52px;
+  border-radius: 14px;
+  font-size: 17px;
+  font-weight: 600;
+  animation: splash-rise 0.6s cubic-bezier(0.2, 0.7, 0.2, 1) both;
+}
+
+.splash-btn--primary {
+  animation-delay: 0.18s;
+}
+
+.splash-btn--secondary {
+  border-color: var(--line-strong);
+  background: transparent;
+  animation-delay: 0.26s;
+}
+
+@keyframes splash-rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .splash,
+  .splash-brand,
+  .splash-btn {
+    animation: none;
+    transition: none;
+  }
+}

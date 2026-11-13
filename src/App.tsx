@@ -14,6 +14,7 @@ import { ThemeToggle } from './components/ThemeToggle';
 import { applyTheme, initialTheme, saveTheme, type Theme } from './lib/theme';
 import { isMobileNow, useIsMobile } from './lib/useIsMobile';
 import { MobileTopbar } from './components/MobileTopbar';
+import { Splash } from './components/Splash';
 import type { SelectTarget } from './components/CvDocument';
 import { IconFile, IconHelp, IconImport, IconPdf, IconRedo, IconSave, IconTour, IconUndo, IconWarn } from './components/Icons';
 
@@ -49,6 +50,8 @@ export default function App() {
   const [theme, setTheme] = useState<Theme>(initialTheme);
   const isMobile = useIsMobile();
   const [menuOpen, setMenuOpen] = useState(false);
+  // Na telefonie przy każdym wejściu najpierw ekran startowy.
+  const [splash, setSplash] = useState(isMobileNow);
   const themeMounted = useRef(false);
 
   useEffect(() => {
@@ -631,6 +634,16 @@ export default function App() {
             <p>Upuść plik .md, aby go zaimportować</p>
           </div>
         </div>
+      )}
+
+      {isMobile && splash && (
+        <Splash
+          onCreate={() => setSplash(false)}
+          onShowMe={() => {
+            setSplash(false);
+            setShowTour(true);
+          }}
+        />
       )}
 
       {showFormat && <FormatDialog onClose={() => setShowFormat(false)} />}

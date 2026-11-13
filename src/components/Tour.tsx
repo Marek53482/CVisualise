@@ -190,7 +190,9 @@ export function Tour({ steps, onClose, mobile = false }: Props) {
         {confirming ? (
           <>
             <h3 id="tour-title">Zakończyć samouczek?</h3>
-            <p>Możesz go uruchomić ponownie w każdej chwili przyciskiem „Samouczek” w górnym pasku.</p>
+            <p>
+              Możesz go uruchomić ponownie w każdej chwili {mobile ? 'z menu ☰ (opcja „Samouczek”).' : 'przyciskiem „Samouczek” w górnym pasku.'}
+            </p>
             <div className="tour-foot">
               <div className="spacer" />
               <button className="btn btn-ghost" onClick={() => setConfirming(false)} autoFocus>
