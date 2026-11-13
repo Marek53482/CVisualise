@@ -8,6 +8,15 @@ import { useEffect, useLayoutEffect, useRef, useState, type InputHTMLAttributes,
 
 const trim = (v: string) => v.trim();
 
+/** Tak jak parser: bez spacji na końcu każdego wiersza i bez pustych wierszy na brzegach. */
+const trimLines = (v: string) =>
+  v
+    .replace(/\r\n?/g, '\n')
+    .split('\n')
+    .map((l) => l.replace(/\s+$/, ''))
+    .join('\n')
+    .trim();
+
 function useBuffer(value: string, normalize: (v: string) => string) {
   const [draft, setDraft] = useState(value);
   useEffect(() => {
@@ -42,7 +51,7 @@ type TextareaProps = Omit<TextareaHTMLAttributes<HTMLTextAreaElement>, 'value' |
 };
 
 export function BufferedTextarea({ value, onValue, minRows = 3, ...rest }: TextareaProps) {
-  const [draft, setDraft] = useBuffer(value, trim);
+  const [draft, setDraft] = useBuffer(value, trimLines);
   const ref = useRef<HTMLTextAreaElement>(null);
 
   useLayoutEffect(() => {
