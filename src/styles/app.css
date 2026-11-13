@@ -5,6 +5,16 @@
  * Ciemny motyw jest celowo stonowany: grafitowo-granatowe tła zamiast czerni, przygaszony tekst
  * i stalowoniebieski akcent, żeby nie męczyć oczu.
  */
+/*
+ * Wyłączenie automatycznego powiększania tekstu w przeglądarkach mobilnych (iOS Safari, Chrome na Androidzie).
+ * Arkusz CV ma szerokość A4 i jest pomniejszany do ekranu; bez tego przeglądarka powiększa czcionkę
+ * w akapitach, nie zmieniając interlinii, i wiersze nachodzą na siebie.
+ */
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
 :root {
   color-scheme: light;
   --bg: #eef0f3;

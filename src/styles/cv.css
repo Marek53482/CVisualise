@@ -1,6 +1,8 @@
 /* ===== Dokument CV (A4) — wspólny dla podglądu i druku ===== */
 
 .cv-sheet {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
   --cv-text: #23272d;
   --cv-strong: #1b2129;
   --cv-muted: #5c6570;
