@@ -8,6 +8,8 @@ export type FitOutcome = { status: 'already' } | { status: 'fitted'; num: Record
 interface Props {
   doc: CvDoc;
   stale: boolean;
+  /** Telefon: podgląd zawsze na szerokość ekranu, bez przycisków powiększenia. */
+  compact?: boolean;
   onSelect: (target: SelectTarget) => void;
   fitRef: MutableRefObject<(() => FitOutcome) | null>;
   onFit: () => void;
@@ -33,7 +35,7 @@ const SHRINK: [keyof Floors, number][] = [
   ['margin-x', -1],
 ];
 
-export function Preview({ doc, stale, onSelect, fitRef, onFit }: Props) {
+export function Preview({ doc, stale, compact = false, onSelect, fitRef, onFit }: Props) {
   const sheetRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
   const rulerRef = useRef<HTMLDivElement>(null);
@@ -73,10 +75,11 @@ export function Preview({ doc, stale, onSelect, fitRef, onFit }: Props) {
   useEffect(() => {
     const el = scrollRef.current;
     if (!el) return;
-    const ro = new ResizeObserver(() => setFitZoom(Math.min(1.35, Math.max(0.35, (el.clientWidth - 56) / SHEET_WIDTH_PX))));
+    const gutter = compact ? 24 : 56;
+    const ro = new ResizeObserver(() => setFitZoom(Math.min(1.35, Math.max(0.3, (el.clientWidth - gutter) / SHEET_WIDTH_PX))));
     ro.observe(el);
     return () => ro.disconnect();
-  }, []);
+  }, [compact]);
 
   // Dopasowanie do jednej strony: próbne ustawienia są nakładane bezpośrednio na arkusz i mierzone.
   fitRef.current = () => {
@@ -116,11 +119,11 @@ export function Preview({ doc, stale, onSelect, fitRef, onFit }: Props) {
     return done({ status: 'impossible' });
   };
 
-  const zoom = zoomMode === 'fit' ? fitZoom : zoomMode;
+  const zoom = zoomMode === 'fit' || compact ? fitZoom : zoomMode;
   const percent = Math.round(fill * 100);
 
   return (
-    <section className="preview">
+    <section className="preview" data-tour="preview">
       <div className="preview-bar no-print">
         <div className={`page-status${pages > 1 ? ' is-over' : ''}`}>
           {pages > 1 ? <IconWarn /> : <IconCheck />}
@@ -134,6 +137,7 @@ export function Preview({ doc, stale, onSelect, fitRef, onFit }: Props) {
             </button>
           )}
         </div>
+        {!compact && (
         <div className="zoom">
           <button className={zoomMode === 'fit' ? 'is-active' : ''} onClick={() => setZoomMode('fit')}>
             Dopasuj
@@ -144,6 +148,7 @@ export function Preview({ doc, stale, onSelect, fitRef, onFit }: Props) {
             </button>
           ))}
         </div>
+        )}
       </div>
       <div className="preview-scroll" ref={scrollRef}>
         {stale && (

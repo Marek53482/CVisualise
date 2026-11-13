@@ -12,6 +12,8 @@ import { Preview, type FitOutcome } from './components/Preview';
 import { Tour, type TourStep } from './components/Tour';
 import { ThemeToggle } from './components/ThemeToggle';
 import { applyTheme, initialTheme, saveTheme, type Theme } from './lib/theme';
+import { isMobileNow, useIsMobile } from './lib/useIsMobile';
+import { MobileTopbar } from './components/MobileTopbar';
 import type { SelectTarget } from './components/CvDocument';
 import { IconFile, IconHelp, IconImport, IconPdf, IconRedo, IconSave, IconTour, IconUndo, IconWarn } from './components/Icons';
 
@@ -45,6 +47,8 @@ export default function App() {
   const [showPrintTip, setShowPrintTip] = useState(false);
   const [showTour, setShowTour] = useState(false);
   const [theme, setTheme] = useState<Theme>(initialTheme);
+  const isMobile = useIsMobile();
+  const [menuOpen, setMenuOpen] = useState(false);
   const themeMounted = useRef(false);
 
   useEffect(() => {
@@ -66,7 +70,8 @@ export default function App() {
     } catch {
       /* brak dostępu do pamięci — nie pokazujemy automatycznie */
     }
-    if (seen) return;
+    // Na telefonie zamiast tego pojawia się ekran startowy z przyciskiem „Pokaż mi”.
+    if (seen || isMobileNow()) return;
     const timer = setTimeout(() => {
       try {
         localStorage.setItem(TOUR_SEEN_KEY, '1');
@@ -195,6 +200,7 @@ export default function App() {
 
   const closeTour = useCallback(() => {
     setShowTour(false);
+    setMenuOpen(false);
     setTab('content');
   }, []);
 
@@ -243,6 +249,11 @@ export default function App() {
       }
     },
     [history.set, toast],
+  );
+
+  const pickMarkdown = useCallback(
+    () => pickFile(isMobileNow() ? '' : '.md,.markdown,.txt,text/markdown'),
+    [],
   );
 
   const importFile = useCallback(
@@ -317,7 +328,7 @@ export default function App() {
         print();
       } else if (key === 'o') {
         e.preventDefault();
-        pickFile('.md,.markdown,.txt,text/markdown').then(importFile);
+        pickMarkdown().then(importFile);
       } else if (key === 'z' && !inField) {
         e.preventDefault();
         if (e.shiftKey) history.redo();
@@ -329,7 +340,7 @@ export default function App() {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [exportMd, print, importFile, history.undo, history.redo]);
+  }, [exportMd, print, importFile, pickMarkdown, history.undo, history.redo]);
 
   // Przeciągnij i upuść plik .md w dowolne miejsce.
   useEffect(() => {
@@ -375,9 +386,29 @@ export default function App() {
   const warnings = parsed.ok ? parsed.warnings : [];
 
   return (
-    <div className="app">
+    <div className={`app${isMobile ? ' is-mobile' : ''}${showTour ? ' tour-active' : ''}`}>
       <style>{pageCss}</style>
 
+      {isMobile ? (
+        <MobileTopbar
+          menuOpen={menuOpen}
+          setMenuOpen={setMenuOpen}
+          onImport={() => pickMarkdown().then(importFile)}
+          onSave={exportMd}
+          onExport={exportPdf}
+          exportDisabled={!parsed.ok}
+          onFormat={() => setShowFormat(true)}
+          onTour={() => setShowTour(true)}
+          onNew={() => loadText(templateSource, 'nowe-cv.md', 'Utworzono nowe CV z szablonu')}
+          onExample={() => loadText(exampleSource, 'przyklad.md', 'Wczytano przykład')}
+          onUndo={history.undo}
+          onRedo={history.redo}
+          canUndo={history.canUndo}
+          canRedo={history.canRedo}
+          theme={theme}
+          onTheme={changeTheme}
+        />
+      ) : (
       <header className="topbar no-print">
         <div className="brand" aria-label="CVisualise">
           <span className="brand-cv">CV</span>isualise
@@ -411,7 +442,7 @@ export default function App() {
               Przykład
             </button>
           </div>
-          <button className="btn" onClick={() => pickFile('.md,.markdown,.txt,text/markdown').then(importFile)} title="Importuj .md (⌘O)" data-tour="import">
+          <button className="btn" onClick={() => pickMarkdown().then(importFile)} title="Importuj .md (⌘O)" data-tour="import">
             <IconImport /> <span className="btn-label btn-label--m">Importuj .md</span>
           </button>
           <button className="btn" onClick={exportMd} title="Zapisz .md (⌘S)" data-tour="save">
@@ -422,6 +453,7 @@ export default function App() {
           </button>
         </div>
       </header>
+      )}
 
       <main className="workspace">
         <aside className="sidebar no-print" data-tour="sidebar">
@@ -468,7 +500,7 @@ export default function App() {
           </div>
         </aside>
 
-        <Preview doc={doc} stale={!parsed.ok} onSelect={select} fitRef={fitRef} onFit={fit} />
+        <Preview doc={doc} stale={!parsed.ok} compact={isMobile} onSelect={select} fitRef={fitRef} onFit={fit} />
       </main>
 
       {dragging && (
@@ -486,6 +518,7 @@ export default function App() {
 
       {showPrintTip && (
         <PrintTip
+          mobile={isMobile}
           onCancel={() => setShowPrintTip(false)}
           onConfirm={(hide) => {
             if (hide) localStorage.setItem(PRINT_TIP_KEY, '1');
@@ -506,13 +539,24 @@ export default function App() {
   );
 }
 
-function PrintTip({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: (hide: boolean) => void }) {
+function PrintTip({ mobile, onCancel, onConfirm }: { mobile: boolean; onCancel: () => void; onConfirm: (hide: boolean) => void }) {
   const [hide, setHide] = useState(false);
   return (
     <div className="modal-backdrop no-print" onMouseDown={(e) => e.target === e.currentTarget && onCancel()}>
       <div className="modal modal--small" role="dialog" aria-modal="true">
         <h2>Eksport do PDF</h2>
-        <p className="muted">Za chwilę otworzy się okno drukowania. Ustaw w nim:</p>
+        <p className="muted">Za chwilę otworzy się okno drukowania. {mobile ? 'Zapisz w nim CV jako PDF:' : 'Ustaw w nim:'}</p>
+        {mobile ? (
+          <ol className="tip-list">
+            <li>
+              <strong>Android:</strong> jako drukarkę wybierz „Zapisz jako PDF” i stuknij ikonę PDF.
+            </li>
+            <li>
+              <strong>iPhone:</strong> w opcjach drukowania stuknij „Udostępnij” (albo rozsuń palcami podgląd strony) i wybierz „Zachowaj w
+              Plikach”.
+            </li>
+          </ol>
+        ) : (
         <ol className="tip-list">
           <li>
             Miejsce docelowe: <strong>Zapisz jako PDF</strong>
@@ -530,6 +574,7 @@ function PrintTip({ onCancel, onConfirm }: { onCancel: () => void; onConfirm: (h
             Zaznacz <strong>„Grafika tła”</strong>, jeśli kolory wyglądają blado
           </li>
         </ol>
+        )}
         <p className="muted small">Nazwa pliku zostanie zaproponowana automatycznie, np. Imie_Nazwisko_CV_Stanowisko.pdf. PDF zawiera prawdziwy tekst — można go zaznaczać i przeszukiwać (ważne dla systemów ATS).</p>
         <label className="check">
           <input type="checkbox" checked={hide} onChange={(e) => setHide(e.target.checked)} /> Nie pokazuj ponownie

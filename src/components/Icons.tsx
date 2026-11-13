@@ -114,3 +114,8 @@ export const IconTour = (p: P) => (
     <path d="m15.5 8.5-2 5-5 2 2-5z" />
   </svg>
 );
+export const IconMenu = (p: P) => (
+  <svg {...base(p)}>
+    <path d="M4 7h16M4 12h16M4 17h16" />
+  </svg>
+);
