@@ -4,6 +4,7 @@ import templateSource from '../examples/szablon.md?raw';
 import { CvParseError, getStyle, parseCv, serializeCv, suggestedBaseName, type CvDoc } from './lib/format';
 import { downloadText, isMarkdownFile, loadDraft, pickFile, saveDraft, withMdExtension } from './lib/files';
 import { useHistory } from './lib/useHistory';
+import { clearPagination, paginateForPrint, setBarePrint } from './lib/paginate';
 import { ContentEditor } from './components/ContentEditor';
 import { StyleEditor } from './components/StyleEditor';
 import { SourceEditor } from './components/SourceEditor';
@@ -336,6 +337,18 @@ export default function App() {
   const doc = parsed.ok ? parsed.doc : lastGood.current;
   const docRef = useRef(doc);
   docRef.current = doc;
+  const isMobileRef = useRef(isMobile);
+  isMobileRef.current = isMobile;
+
+  // Telefon: druk bez marginesów strony (iOS nie pozwala wyłączyć nagłówka i stopki), więc CV dzielimy na kartki sami.
+  const preparePrint = useCallback(() => {
+    const sheet = document.querySelector<HTMLElement>('.preview .cv-sheet');
+    if (!sheet) return;
+    setBarePrint(isMobileRef.current);
+    if (!isMobileRef.current) return clearPagination(sheet);
+    const { num } = getStyle(docRef.current.meta);
+    paginateForPrint(sheet, num['margin-top'], num['margin-bottom']);
+  }, []);
 
   const toast = useCallback((text: string, tone: Toast['tone'] = 'info') => {
     const id = Date.now() + Math.random();
@@ -404,8 +417,9 @@ export default function App() {
       setTab('source');
       return;
     }
+    preparePrint();
     window.print();
-  }, [parsed.ok, toast]);
+  }, [parsed.ok, toast, preparePrint]);
 
   const exportPdf = useCallback(() => {
     if (localStorage.getItem(PRINT_TIP_KEY) !== '1') setShowPrintTip(true);
@@ -415,7 +429,10 @@ export default function App() {
   // Tytuł dokumentu = domyślna nazwa pliku PDF w oknie drukowania.
   useEffect(() => {
     const original = document.title;
-    const before = () => (document.title = suggestedBaseName(docRef.current));
+    const before = () => {
+      document.title = suggestedBaseName(docRef.current);
+      preparePrint();
+    };
     const after = () => (document.title = original);
     window.addEventListener('beforeprint', before);
     window.addEventListener('afterprint', after);
@@ -423,7 +440,7 @@ export default function App() {
       window.removeEventListener('beforeprint', before);
       window.removeEventListener('afterprint', after);
     };
-  }, []);
+  }, [preparePrint]);
 
   const fit = useCallback(() => {
     const outcome = fitRef.current?.();

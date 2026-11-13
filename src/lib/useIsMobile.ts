@@ -11,7 +11,11 @@ export function useIsMobile(): boolean {
   const [mobile, setMobile] = useState(isMobileNow);
   useEffect(() => {
     const mq = window.matchMedia(MOBILE_QUERY);
-    const onChange = () => setMobile(mq.matches);
+    // Podczas drukowania szerokość strony to szerokość kartki A4 - nie przełączamy wtedy układu.
+    const onChange = () => {
+      if (window.matchMedia('print').matches) return;
+      setMobile(mq.matches);
+    };
     onChange();
     mq.addEventListener('change', onChange);
     return () => mq.removeEventListener('change', onChange);

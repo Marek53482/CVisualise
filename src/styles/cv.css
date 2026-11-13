@@ -343,3 +343,44 @@
     break-before: page;
   }
 }
+
+/* --- Druk na telefonie: strona bez marginesów, odstępy daje arkusz (zob. lib/paginate.ts) --- */
+
+.cv-print-spacer {
+  display: none;
+}
+
+.cv-sheet.is-paginating .cv-print-spacer {
+  display: block;
+}
+
+.cv-sheet.is-paginating [data-print-push] {
+  margin-top: 0 !important;
+}
+
+.cv-sheet.is-paginating .cv-pagebreak {
+  margin: 0;
+  border: 0;
+}
+
+@media print {
+  html[data-print-bare] .cv-sheet {
+    padding: var(--cv-mt) var(--cv-mx) 0;
+  }
+
+  html[data-print-bare] .cv-print-spacer {
+    display: block;
+  }
+
+  html[data-print-bare] [data-print-push] {
+    margin-top: 0 !important;
+  }
+
+  /* Podział na kartki jest już policzony - przeglądarka nie przesuwa bloków sama. */
+  html[data-print-bare] .cv-sheet *,
+  html[data-print-bare] .cv-pagebreak {
+    break-before: auto !important;
+    break-after: auto !important;
+    break-inside: auto !important;
+  }
+}
